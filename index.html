@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1e3a8a">
+<title>Minimarket Don Tomas</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="styles.css">
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body data-theme="light">
+
+<!-- ============ LOGIN ============ -->
+<div id="loginScreen" class="screen active">
+  <div class="login-brand">
+    <div class="brand-logo">🏪</div>
+    <h1>Minimarket Don Tomas</h1>
+    <p class="subtitle">Sistema POS Seguro & Inventario</p>
+    <div id="demoBanner" class="hidden demo-banner">🎓 MODO DEMO ACTIVO</div>
+  </div>
+  <div class="login-card">
+    <h2>Selecciona tu usuario</h2>
+    <div id="userGrid" class="user-grid"></div>
+    
+    <div id="pinArea" class="pin-area hidden">
+      <div id="selectedUser" class="selected-user"></div>
+      <input type="password" id="pinInput" maxlength="4" placeholder="PIN (4 dígitos)" inputmode="numeric">
+      <div id="pinError" class="pin-error"></div>
+      <button id="btnEnter" class="btn btn-primary">Ingresar</button>
+    </div>
+    
+    <button id="btnToggleDemo" class="btn btn-secondary" style="width:100%; margin-top:12px; font-size:13px;">🎓 Entrar en Modo Demo (Práctica)</button>
+    <button id="btnInstallApp" class="btn btn-warning hidden" style="width:100%; margin-top:8px;">⬇️ Instalar App</button>
+  </div>
+  <div class="login-footer">
+    <small>🔒 Acceso restringido a redes autorizadas</small>
+  </div>
+</div>
+
+<!-- ============ APP PRINCIPAL ============ -->
+<div id="appScreen" class="screen hidden">
+  <header class="app-header">
+    <div class="header-left">
+      <span class="brand-mini"> Don Tomas</span>
+      <span id="userName" class="user-chip"></span>
+      <span id="turnoBadge" class="turno-badge hidden">🟢 En turno</span>
+    </div>
+    <div class="header-right">
+      <button id="btnTurno" class="icon-btn turno-btn">▶️ Iniciar</button>
+      <button id="btnMute" class="icon-btn">🔊</button>
+      <button id="btnLogout" class="icon-btn">🚪</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="pos"> Caja</button>
+    <button class="tab" data-tab="dashboard">📊 Dashboard</button>
+    <button class="tab" data-tab="stock">📦 Stock</button>
+    <button class="tab" data-tab="manuel">🎙️ Manuel</button>
+    <button class="tab" data-tab="compras"> Compras</button>
+    <button class="tab" data-tab="reportes"> Reportes</button>
+    <button class="tab" data-tab="proveedores">🚚 Proveed.</button>
+    <button class="tab" data-tab="fiado">📒 Fiado</button>
+    <button class="tab" data-tab="usuarios" id="tabUsuarios" style="display:none;">👥 Usuarios</button>
+    <button class="tab" data-tab="config">⚙️ Perfil</button>
+  </nav>
+
+  <main class="content">
+    <!-- TAB CAJA (POS) -->
+    <section id="tab-pos" class="tab-panel active">
+      <div class="pos-layout">
+        <div class="pos-products">
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input type="text" id="searchProduct" placeholder="🔍 Buscar producto..." style="flex:1; padding:12px; border-radius:10px; border:2px solid var(--border);">
+            <button id="btnVoiceSearch" class="btn btn-secondary" style="padding:12px;">🎤</button>
+            <button id="btnScanBarcode" class="btn btn-primary" style="padding:12px;">📷</button>
+          </div>
+          
+          <div id="categoriesView">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <h3 style="margin:0; color:var(--brand);">📂 Categorías</h3>
+              <button id="btnAddCategory" class="btn btn-sm btn-primary">+ Categoría</button>
+            </div>
+            <div id="categoryGrid" class="category-grid"></div>
+          </div>
+          
+          <div id="productsByCategory" class="hidden">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+              <button id="btnBackCategories" class="btn btn-sm btn-secondary">← Categorías</button>
+              <h3 id="currentCategoryTitle" style="margin:0;"></h3>
+            </div>
+            <div id="productGrid" class="product-grid"></div>
+          </div>
+        </div>
+        
+        <aside class="pos-cart">
+          <h3>🧾 Venta actual</h3>
+          <div id="cartList" class="cart-list"></div>
+          <div class="cart-total">
+            <span>TOTAL:</span>
+            <strong id="cartTotal">S/ 0.00</strong>
+          </div>
+          <div class="pay-buttons">
+            <button class="btn pay-btn pay-efectivo selected" data-pay="Efectivo">💵 Efectivo</button>
+            <button class="btn pay-btn pay-yape" data-pay="Yape">📱 Yape</button>
+            <button class="btn pay-btn pay-plin" data-pay="Plin">📲 Plin</button>
+            <button class="btn pay-btn pay-fiado" data-pay="Fiado"> Fiado</button>
+          </div>
+          <div id="fiadoFields" class="hidden" style="margin:10px 0; padding:10px; background:#fff3cd; border-radius:10px;">
+            <input type="text" id="clienteFiado" placeholder="Nombre del cliente" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:2px solid var(--border);">
+            <input type="text" id="dniFiado" placeholder="DNI/Teléfono" style="width:100%; padding:10px; border-radius:8px; border:2px solid var(--border);">
+          </div>
+          <button id="btnCharge" class="btn btn-charge">💰 COBRAR</button>
+        </aside>
+      </div>
+    </section>
+
+    <!-- TAB DASHBOARD -->
+    <section id="tab-dashboard" class="tab-panel">
+      <h2>📊 Dashboard - Resumen del Negocio</h2>
+      
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-icon">💰</div>
+          <div class="kpi-value" id="kpiVentasHoy">S/ 0.00</div>
+          <div class="kpi-label">Ventas Hoy</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🧾</div>
+          <div class="kpi-value" id="kpiTransacciones">0</div>
+          <div class="kpi-label">Transacciones</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon"></div>
+          <div class="kpi-value" id="kpiTicketPromedio">S/ 0.00</div>
+          <div class="kpi-label">Ticket Promedio</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon">🏆</div>
+          <div class="kpi-value" id="kpiProductoTop">-</div>
+          <div class="kpi-label">Producto Top</div>
+        </div>
+      </div>
+
+      <div class="charts-grid">
+        <div class="chart-container">
+          <h3>📊 Ventas por Hora (Hoy)</h3>
+          <canvas id="chartVentasHora"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3>💳 Métodos de Pago</h3>
+          <canvas id="chartMetodosPago"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3> Ventas por Día de la Semana</h3>
+          <canvas id="chartVentasDia"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3>🏆 Top 10 Productos</h3>
+          <canvas id="chartTopProductos"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB STOCK -->
+    <section id="tab-stock" class="tab-panel">
+      <h2>📦 Control de Stock</h2>
+      <div style="background:#e3f2fd; padding:12px; border-radius:10px; margin-bottom:12px;">
+        <strong>📊 Leyenda:</strong>
+        <span style="display:inline-flex; align-items:center; margin-left:10px;">
+          <span style="width:20px; height:10px; background:linear-gradient(90deg, #0077b6, #00b4d8); border-radius:3px; margin-right:5px;"></span>
+          Abastecido
+        </span>
+        <span style="display:inline-flex; align-items:center; margin-left:15px;">
+          <span style="width:20px; height:10px; background:linear-gradient(90deg, #f77f00, #ffb703); border-radius:3px; margin-right:5px;"></span>
+          Medio
+        </span>
+        <span style="display:inline-flex; align-items:center; margin-left:15px;">
+          <span style="width:20px; height:10px; background:linear-gradient(90deg, #d62828, #f77f00); border-radius:3px; margin-right:5px;"></span>
+          Crítico
+        </span>
+      </div>
+      <button id="btnAddProductGlobal" class="btn btn-primary" style="margin-bottom:12px;">+ Agregar Producto</button>
+      <div id="inventoryList" class="inventory-list"></div>
+    </section>
+
+    <!-- TAB MANUEL COMPRAS -->
+    <section id="tab-manuel" class="tab-panel">
+      <h2>🎙️ Manuel - Compras al Mayor</h2>
+      <div style="background:#fff3cd; padding:12px; border-radius:10px; margin-bottom:16px;">
+        <strong>📋 Instrucciones:</strong>
+        <ol style="margin:8px 0; padding-left:20px;">
+          <li>Presiona el micrófono y di: "Agregar 50 kilos de papa a 80 soles"</li>
+          <li>El sistema reconocerá el producto, cantidad y precio</li>
+          <li>Al finalizar, presiona "Generar Comparativo" para ver faltantes</li>
+        </ol>
+      </div>
+      
+      <div class="manuel-toolbar" style="display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+        <button id="btnVoiceList" class="btn btn-primary">🎤 Crear Lista por Voz</button>
+        <button id="btnManualList" class="btn btn-secondary">️ Crear Lista Manual</button>
+        <button id="btnGenerateComparison" class="btn btn-warning">📊 Generar Comparativo</button>
+        <button id="btnClearManuelList" class="btn btn-red">🗑️ Limpiar</button>
+      </div>
+      
+      <div id="manuelListContainer" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div style="background:white; padding:12px; border-radius:10px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+          <h3>📋 Lista de Compras</h3>
+          <div id="manuelShoppingList"></div>
+          <div style="margin-top:12px; padding:10px; background:#f8f9fa; border-radius:8px;">
+            <strong>Total Estimado: </strong><span id="manuelTotal" style="font-size:18px; color:var(--brand);">S/ 0.00</span>
+          </div>
+        </div>
+        
+        <div style="background:white; padding:12px; border-radius:10px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+          <h3>✅ Productos Comprados</h3>
+          <div id="manuelPurchasedList"></div>
+          <div style="margin-top:12px; padding:10px; background:#d4edda; border-radius:8px;">
+            <strong>Total Gastado: </strong><span id="manuelSpent" style="font-size:18px; color:#28a745;">S/ 0.00</span>
+          </div>
+        </div>
+      </div>
+      
+      <div id="manuelComparison" class="hidden" style="margin-top:16px; padding:16px; background:#e7f3ff; border-radius:10px; border-left:4px solid #0077b6;">
+        <h3>📊 Comparativo Final</h3>
+        <div id="comparisonContent"></div>
+      </div>
+    </section>
+
+    <!-- TAB COMPRAS (Productos por reabastecer) -->
+    <section id="tab-compras" class="tab-panel">
+      <h2>🛒 Productos por Comprar</h2>
+      <div style="background:#fff3cd; padding:12px; border-radius:10px; margin-bottom:16px;">
+        <strong>️ Productos con Stock Bajo:</strong>
+        <p style="margin:8px 0 0; font-size:13px;">Estos productos están por debajo del 20% de su stock máximo y necesitan reabastecimiento urgente.</p>
+      </div>
+      <div id="lowStockList" class="low-stock-list"></div>
+      <div style="margin-top:16px; padding:12px; background:#e7f3ff; border-radius:10px;">
+        <strong>Total de productos a comprar: </strong><span id="totalLowStock">0</span>
+      </div>
+    </section>
+
+    <!-- TAB REPORTES -->
+    <section id="tab-reportes" class="tab-panel">
+      <h2> Reportes Avanzados</h2>
+      
+      <div class="report-filters">
+        <div class="filter-group">
+          <label>📅 Período:</label>
+          <select id="reportPeriod" class="form-select">
+            <option value="day">Hoy</option>
+            <option value="week">Esta Semana</option>
+            <option value="month">Este Mes</option>
+            <option value="bimonthly">Bimestre</option>
+            <option value="quarterly">Trimestre</option>
+            <option value="year">Año</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        
+        <div class="filter-group" id="userFilterGroup">
+          <label> Vendedor:</label>
+          <select id="reportUser" class="form-select">
+            <option value="all">Todos</option>
+          </select>
+        </div>
+        
+        <button onclick="generateSalesReport()" class="btn btn-primary">📊 Generar Informe</button>
+      </div>
+
+      <div id="salesReport" class="sales-report">
+        <div style="text-align:center; padding:40px; color:#666;">
+          Selecciona un período y genera el informe
+        </div>
+      </div>
+
+      <div class="charts-grid" style="margin-top:20px;">
+        <div class="chart-container">
+          <h3>📈 Tendencia de Ventas</h3>
+          <canvas id="chartTendencia"></canvas>
+        </div>
+        <div class="chart-container">
+          <h3>👥 Rendimiento por Vendedor</h3>
+          <canvas id="chartVendedores"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB PROVEEDORES (Créditos) -->
+    <section id="tab-proveedores" class="tab-panel">
+      <h2>🚚 Créditos de Proveedores</h2>
+      <button id="btnAddProvider" class="btn btn-primary" style="margin-bottom:12px;">+ Agregar Proveedor/Crédito</button>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div style="background:#fff3cd; padding:16px; border-radius:10px; text-align:center;">
+          <div style="font-size:13px; color:#666;">Por Pagar</div>
+          <div style="font-size:28px; font-weight:bold; color:#f77f00; margin:8px 0;">S/ <span id="totalProviderDebt">0.00</span></div>
+        </div>
+        <div style="background:#d4edda; padding:16px; border-radius:10px; text-align:center;">
+          <div style="font-size:13px; color:#666;">Pagado</div>
+          <div style="font-size:28px; font-weight:bold; color:#28a745; margin:8px 0;">S/ <span id="totalProviderPaid">0.00</span></div>
+        </div>
+      </div>
+      
+      <div id="providerList" class="provider-list"></div>
+    </section>
+
+    <!-- TAB FIADO (Clientes) -->
+    <section id="tab-fiado" class="tab-panel">
+      <h2>📒 Clientes a Crédito (Fiado)</h2>
+      
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div style="background:#fff3cd; padding:16px; border-radius:10px; text-align:center; cursor:pointer;" onclick="showFiadoModal('pending')">
+          <div style="font-size:13px; color:#666;">Por Cobrar</div>
+          <div style="font-size:28px; font-weight:bold; color:#f77f00; margin:8px 0;">S/ <span id="totalFiadoPending">0.00</span></div>
+          <small style="color:#666;">(Click para ver)</small>
+        </div>
+        <div style="background:#d4edda; padding:16px; border-radius:10px; text-align:center; cursor:pointer;" onclick="showFiadoModal('paid')">
+          <div style="font-size:13px; color:#666;">Cobrado</div>
+          <div style="font-size:28px; font-weight:bold; color:#28a745; margin:8px 0;">S/ <span id="totalFiadoPaid">0.00</span></div>
+          <small style="color:#666;">(Click para ver)</small>
+        </div>
+      </div>
+      
+      <div id="fiadoList" class="fiado-list"></div>
+    </section>
+
+    <!-- TAB USUARIOS (Solo Admins) -->
+    <section id="tab-usuarios" class="tab-panel">
+      <h2>👥 Gestión de Usuarios</h2>
+      <button id="btnAddUser" class="btn btn-primary" style="margin-bottom:12px;">+ Crear Nuevo Usuario</button>
+      
+      <div id="userList" class="user-list"></div>
+    </section>
+
+    <!-- TAB PERFIL -->
+    <section id="tab-config" class="tab-panel">
+      <h2>️ Mi Perfil y Personalización</h2>
+      
+      <div class="config-card">
+        <h3>📸 Foto de Perfil</h3>
+        <img id="profilePreview" src="" style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid var(--brand); display:block; margin-bottom:10px;">
+        <input type="file" id="photoInput" accept="image/*" capture="user" style="margin-bottom:8px;">
+        <button id="btnUploadPhoto" class="btn btn-primary">Actualizar Foto</button>
+      </div>
+
+      <div class="config-card">
+        <h3>🏷️ Nombre en Pantalla</h3>
+        <input type="text" id="newDisplayName" placeholder="Nuevo nombre" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:2px solid var(--border);">
+        <button id="btnUpdateName" class="btn btn-primary">Guardar Nombre</button>
+      </div>
+
+      <div class="config-card">
+        <h3>🔑 Cambiar PIN de Acceso</h3>
+        <input type="password" id="currentPinVerify" maxlength="4" placeholder="PIN actual" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:2px solid var(--border);">
+        <input type="password" id="newPinInput" maxlength="4" placeholder="Nuevo PIN (4 dígitos)" style="width:100%; padding:10px; margin-bottom:8px; border-radius:8px; border:2px solid var(--border);">
+        <button id="btnChangePin" class="btn btn-warning">Actualizar PIN</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- ============ MODALES ============ -->
+
+<!-- Modal Producto -->
+<div id="productModal" class="modal hidden">
+  <div class="modal-content modal-large">
+    <h3>📦 Agregar Producto</h3>
+    <div class="form-grid">
+      <div class="form-group full-width">
+        <label>Nombre del producto</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="prodName" placeholder="Ej: Arroz 1kg" style="flex:1;">
+          <button id="btnVoiceProduct" class="btn btn-secondary" style="padding:10px;" title="Dictar por voz">🎤</button>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Precio (S/)</label>
+        <input type="number" id="prodPrice" placeholder="0.00" step="0.01" min="0">
+      </div>
+      
+      <div class="form-group">
+        <label>Stock inicial</label>
+        <input type="number" id="prodStock" placeholder="0" min="0">
+      </div>
+      
+      <div class="form-group">
+        <label>Stock máximo</label>
+        <input type="number" id="prodMax" placeholder="0" min="0">
+      </div>
+      
+      <div class="form-group">
+        <label>Código de barras (opcional)</label>
+        <input type="text" id="prodBarcode" placeholder="775...">
+      </div>
+      
+      <div class="form-group full-width">
+        <label>Ícono</label>
+        <div id="iconSelector" class="icon-selector">
+          <div class="icon-grid" id="iconGrid"></div>
+        </div>
+        <input type="hidden" id="prodIcon" value="">
+      </div>
+    </div>
+    
+    <div class="modal-actions">
+      <button onclick="closeModal('productModal')" class="btn btn-secondary">Cancelar</button>
+      <button id="btnSaveProduct" class="btn btn-primary">💾 Guardar Producto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Turno -->
+<div id="turnoModal" class="modal hidden">
+  <div class="modal-content">
+    <h3 id="turnoModalTitle">🕐 Control de Turno</h3>
+    <div id="turnoModalContent"></div>
+    <div class="modal-actions">
+      <button onclick="closeModal('turnoModal')" class="btn btn-secondary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Fiado -->
+<div id="fiadoModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>💳 Gestión de Fiado</h3>
+    <div id="fiadoModalContent"></div>
+    <div class="modal-actions">
+      <button onclick="closeModal('fiadoModal')" class="btn btn-secondary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Proveedor -->
+<div id="providerModal" class="modal hidden">
+  <div class="modal-content">
+    <h3>💳 Gestión de Crédito de Proveedor</h3>
+    <div id="providerModalContent"></div>
+    <div class="modal-actions">
+      <button onclick="closeModal('providerModal')" class="btn btn-secondary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Pago -->
+<div id="confirmPaymentModal" class="modal hidden">
+  <div class="modal-content" style="max-width:400px;">
+    <h3>💰 Confirmar Pago</h3>
+    <p id="confirmPaymentText"></p>
+    <div style="margin:20px 0; padding:16px; background:#f8f9fa; border-radius:8px;">
+      <strong>Monto: S/ <span id="confirmPaymentAmount">0.00</span></strong>
+    </div>
+    <div class="modal-actions">
+      <button onclick="closeModal('confirmPaymentModal')" class="btn btn-secondary">No</button>
+      <button id="btnConfirmPayment" class="btn btn-success">Sí, Dar por Pagado</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nuevo Usuario -->
+<div id="newUserModal" class="modal hidden">
+  <div class="modal-content">
+    <h3> Crear Nuevo Usuario</h3>
+    <input type="text" id="newUserName" placeholder="Nombre completo" style="width:100%; padding:10px; margin:8px 0; border-radius:8px; border:2px solid var(--border);">
+    <input type="email" id="newUserEmail" placeholder="Correo electrónico" style="width:100%; padding:10px; margin:8px 0; border-radius:8px; border:2px solid var(--border);">
+    <input type="password" id="newUserPin" maxlength="4" placeholder="PIN (4 dígitos)" style="width:100%; padding:10px; margin:8px 0; border-radius:8px; border:2px solid var(--border);">
+    <select id="newUserRole" style="width:100%; padding:10px; margin:8px 0; border-radius:8px; border:2px solid var(--border);">
+      <option value="editor">Editor (sin acceso a informes)</option>
+      <option value="admin">Administrador (acceso total)</option>
+    </select>
+    <div class="modal-actions">
+      <button onclick="closeModal('newUserModal')" class="btn btn-secondary">Cancelar</button>
+      <button onclick="createNewUser()" class="btn btn-primary">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- TICKET VIEW -->
+<div id="ticketView" class="screen hidden">
+  <div class="ticket-container">
+    <div class="ticket-header">
+      <div class="brand-logo">🏪</div>
+      <h1>Minimarket Don Tomas</h1>
+      <p class="ticket-subtitle">Ticket de Venta</p>
+    </div>
+    
+    <div class="ticket-body">
+      <div class="ticket-info">
+        <div><strong>Fecha:</strong> <span id="ticketDate"></span></div>
+        <div><strong>Atendido por:</strong> <span id="ticketUser"></span></div>
+        <div><strong>Método de pago:</strong> <span id="ticketPay"></span></div>
+        <div id="ticketClientRow" class="hidden"><strong>Cliente:</strong> <span id="ticketClient"></span></div>
+      </div>
+      
+      <div class="ticket-divider"></div>
+      
+      <div id="ticketItems" class="ticket-items"></div>
+      
+      <div class="ticket-divider"></div>
+      
+      <div class="ticket-total">
+        <span>TOTAL:</span>
+        <strong id="ticketTotal">S/ 0.00</strong>
+      </div>
+      
+      <div class="ticket-footer">
+        <p>¡Gracias por su compra!</p>
+        <p style="font-size:11px; margin-top:5px;">Vuelva pronto 🏪</p>
+      </div>
+    </div>
+    
+    <div class="ticket-actions">
+      <button id="btnSendWhatsApp" class="btn btn-success">📱 Enviar por WhatsApp</button>
+      <button id="btnPrintTicket" class="btn btn-primary">🖨️ Imprimir Ticket</button>
+      <button id="btnNewSale" class="btn btn-secondary"> Nueva Venta</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ESCÁNER -->
+<div id="scannerModal" class="modal hidden">
+  <div class="modal-content" style="max-width:90vw;">
+    <h3>📷 Escanear Código de Barras</h3>
+    <div id="reader" style="width:100%; min-height:250px; background:#000; border-radius:8px;"></div>
+    <button id="btnCloseScanner" class="btn btn-red" style="width:100%; margin-top:10px;">Cerrar Cámara</button>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "minimarket-don-tomas",
+  "version": "1.0.0",
+  "description": "POS PWA Minimarket Don Tomas",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

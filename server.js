@@ -1,9 +1,9 @@
 const express = require('express');
 const path = require('path');
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
-// 1. SEGURIDAD DE CABECERAS - CSP ACTUALIZADO
+// 1. SEGURIDAD DE CABECERAS
 app.use((req, res, next) => {
   res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -35,20 +35,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// 2. GEO-FENCING (Solo localhost)
+// 2. GEO-FENCING (Solo localhost y Render)
 app.use((req, res, next) => {
   const ip = req.ip || req.socket.remoteAddress;
   const allowed = ['127.0.0.1', '::1', 'localhost', '::ffff:127.0.0.1'];
   
+  // Permitir también en producción (Render)
+  if (process.env.NODE_ENV === 'production') {
+    return next();
+  }
+  
   if (allowed.includes(ip)) {
     return next();
   }
-  console.warn(`⛔ Intento de acceso bloqueado desde IP: ${ip}`);
+  console.warn(`⛔ Acceso bloqueado desde IP: ${ip}`);
   res.status(403).send('Acceso denegado: Red no autorizada.');
 });
 
-// 3. SERVIR ARCHIVOS ESTÁTICOS
-app.use(express.static(path.join(__dirname, 'public'), {
+// 3. SERVIR ARCHIVOS ESTÁTICOS (desde la raíz)
+app.use(express.static(path.join(__dirname), {
   index: 'index.html',
   setHeaders: (res, path) => {
     if (path.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
@@ -57,13 +62,12 @@ app.use(express.static(path.join(__dirname, 'public'), {
 
 // 4. FALLBACK SEGURO
 app.use((req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
   console.log('==================================================');
-  console.log('🏪 MINIMARKET DON TOMAS - Servidor Seguro Activo');
-  console.log('🌐 http://localhost:5000');
-  console.log('🔒 CSP, Geo-fencing y Anti-Directory Traversal: ON');
+  console.log('🏪 MINIMARKET DON TOMAS - Servidor Activo');
+  console.log('🌐 Puerto: ' + PORT);
   console.log('==================================================');
 });
